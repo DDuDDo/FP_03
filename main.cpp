@@ -103,7 +103,7 @@ public:
    ~Dynamic_Hash();
    unsigned Get_Hash_Offset(string stu_id);
    void Block_Full(string stu_id, int Block_Bit_Number, fstream& Dat_File);
-   void Make_txt(fstream& Dat_File);
+   void Make_txt(fstream& Dat_File,char* filename);
    void Print_Hash();
 };
 
@@ -355,8 +355,10 @@ void Dynamic_Hash::Expand_Table(unsigned Primary_Index, fstream& Dat_File)
       delete Old_Block;
 }
 // new func
-void Dynamic_Hash::Make_txt(fstream& Dat_File){
-    ofstream outfile("DB.txt");
+void Dynamic_Hash::Make_txt(fstream& Dat_File,char* filename){
+    char Filename[80] = "";
+   sprintf(Filename, "%s_DB.txt", filename);
+    ofstream outfile(Filename);
     int total = 0;
     int DB_size = 0;
 
@@ -917,9 +919,9 @@ void B_Plus_Tree::check(){
     test.close();
 }
 
-B_Plus_Tree* Tree;
 
-bool openDB(char* filename,Dynamic_Hash** Hash,fstream& Dat_File){
+
+bool openDB(char* filename,Dynamic_Hash** Hash,fstream& Dat_File,B_Plus_Tree** Tree){
 
    char Filename[80] = "";
    sprintf(Filename, "%s.DB", filename);
@@ -939,16 +941,16 @@ bool openDB(char* filename,Dynamic_Hash** Hash,fstream& Dat_File){
    remove(Filename);
    *Hash = new Dynamic_Hash(Filename);
 
-/*
+
    strcpy(Filename,"");
    sprintf(Filename, "%s_score.idx",filename);
    remove(Filename);
-   Tree = new B_Plus_Tree(Filename);
-*/
+   *Tree = new B_Plus_Tree(Filename);
+
    return true;
 }
 
-unsigned insertRecord(char* name, unsigned ID, float score, unsigned advisorID,Dynamic_Hash* Hash,fstream& Dat_File)
+unsigned insertRecord(char* name, unsigned ID, float score, unsigned advisorID,Dynamic_Hash* Hash,fstream& Dat_File,B_Plus_Tree* Tree)
 {
    char* temp = new char[10];
    char* temp1 = new char[10];
@@ -962,10 +964,9 @@ unsigned insertRecord(char* name, unsigned ID, float score, unsigned advisorID,D
 
    int Dat_File_Offset = Hash->Get_Hash_Offset(id);
 
- //  cout << Dat_File_Offset << " ";
+
    Dat_File.seekg(Dat_File_Offset, ios::beg);
    Dat_File.read((char*)&Dat_block, sizeof(Block));
- //  cout<< Dat_block.Record_Count << " " << Dat_block.Bit_Number << " " << Hash->return_Table_bit()<< endl;
 
    if(Dat_block.Record_Count < BLOCK_MAX)
       {
@@ -985,12 +986,12 @@ unsigned insertRecord(char* name, unsigned ID, float score, unsigned advisorID,D
       {
          Hash->Block_Full(id, Dat_block.Bit_Number, Dat_File);
 
-         insertRecord(name,ID,score,advisorID,Hash,Dat_File);
+         insertRecord(name,ID,score,advisorID,Hash,Dat_File,Tree);
       }
 
       if(Is_Insert == true)
       {
-         //Tree->Insert(score,(long)ID);
+         Tree->Insert(score,(long)ID);
       }
 
 
@@ -1020,7 +1021,7 @@ unsigned searchID(unsigned ID,fstream& Dat_File,Dynamic_Hash* Hash){
 
    return blockNumber;
 }
-void get_info(Dynamic_Hash* Hash,fstream& Dat_File,char* csvname){
+void get_info(Dynamic_Hash* Hash,fstream& Dat_File,char* csvname,B_Plus_Tree* Tree){
     char Filename[80] = "";
    sprintf(Filename, "%s.csv", csvname);
 
@@ -1071,7 +1072,7 @@ void get_info(Dynamic_Hash* Hash,fstream& Dat_File,char* csvname){
             total ++;
            // cout << total << " ";
             // insertRecord
-            unsigned blockNumber = insertRecord(name, studentID, score, advisorID,Hash,Dat_File);
+            unsigned blockNumber = insertRecord(name, studentID, score, advisorID,Hash,Dat_File,Tree);
 
 
         }
@@ -1087,26 +1088,24 @@ int main()
 
     Dynamic_Hash* Hash1;
     Dynamic_Hash* Hash2;
-
+    B_Plus_Tree* Tree1;
+    B_Plus_Tree* Tree2;
 
     fstream Dat_File1;
 
     fstream Dat_File2;
 
-   openDB("Students",&Hash1,Dat_File1);
-   get_info(Hash1,Dat_File1,"21");
+   openDB("Students",&Hash1,Dat_File1,&Tree1);
+   get_info(Hash1,Dat_File1,"21",Tree1);
 
-    Hash1->Make_txt(Dat_File1);
+    Hash1->Make_txt(Dat_File1,"Students");
     Hash1->Print_Hash();
 
-    openDB("Prof",&Hash2,Dat_File2);
-    Dat_File2.seekg(0, ios::beg);
-    Dat_File2.read((char*)&Dat_block, sizeof(Block));
+    openDB("Prof",&Hash2,Dat_File2,&Tree2);
 
+   get_info(Hash2,Dat_File2,"22",Tree2);
 
-   get_info(Hash2,Dat_File2,"22");
-
-    Hash2->Make_txt(Dat_File2);
+    Hash2->Make_txt(Dat_File2,"Prof");
     Hash2->Print_Hash();
 
 
