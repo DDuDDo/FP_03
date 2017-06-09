@@ -16,6 +16,7 @@
 
 using namespace std;
 
+
 int str2int (const string &str) {
   stringstream ss(str);
   int num;
@@ -44,35 +45,9 @@ float str2float (const string &str) {
   return num;
 }
 
-fstream Dat_File;
 
-typedef struct {
-   unsigned blockNumber;
-   unsigned studentId;
-} SaveInfo;
 
-vector<SaveInfo> infoVector;
 
-void insertBlockNumber(unsigned blockNumber, unsigned studentId){
-
-   SaveInfo s;
-   s.blockNumber = blockNumber;
-   s.studentId = studentId;
-   infoVector.push_back(s);
-}
-
-bool checkBlockNumber(unsigned blockNumber, unsigned studentId){
-   bool isThere = false;
-   for(int i = 0; i < infoVector.size(); i++){
-      if(infoVector[i].studentId == studentId) {
-         if(infoVector[i].blockNumber == blockNumber){
-            isThere = true;
-         }
-      }
-   }
-
-   return isThere;
-}
 
 class Student{
 public :
@@ -123,11 +98,12 @@ private:
    fstream Hash_File;
 
 public:
+    int return_Table_bit();
    Dynamic_Hash(char* filename);
    ~Dynamic_Hash();
    unsigned Get_Hash_Offset(string stu_id);
    void Block_Full(string stu_id, int Block_Bit_Number, fstream& Dat_File);
-   void Make_txt();
+   void Make_txt(fstream& Dat_File);
    void Print_Hash();
 };
 
@@ -136,7 +112,9 @@ Hash_Table::Hash_Table()
    for(int i=0; i<TABLESIZE; i++)
       Table_Block_Offset[i] = -1;
 }
-
+int Dynamic_Hash::return_Table_bit(){
+    return Table_Bit_Number;
+}
 Dynamic_Hash::Dynamic_Hash(char* filename)
 {
    Hash_File.open(filename, ios::binary | ios::in | ios::out);
@@ -154,6 +132,7 @@ Dynamic_Hash::Dynamic_Hash(char* filename)
       Hash_File.read((char*)&Table_Bit_Number, sizeof(Table_Bit_Number));
       Hash_File.read((char*)&Hash_table, sizeof(Hash_table));
    }
+
 }
 
 Dynamic_Hash::~Dynamic_Hash()
@@ -206,6 +185,7 @@ unsigned Dynamic_Hash::HASH(string str)
 
 unsigned Dynamic_Hash::Get_Hash_Offset(string stu_id)
 {
+
    unsigned Primary_Index = HASH(stu_id);
 
    if(Table_Bit_Number == 0)
@@ -375,7 +355,7 @@ void Dynamic_Hash::Expand_Table(unsigned Primary_Index, fstream& Dat_File)
       delete Old_Block;
 }
 // new func
-void Dynamic_Hash::Make_txt(){
+void Dynamic_Hash::Make_txt(fstream& Dat_File){
     ofstream outfile("DB.txt");
     int total = 0;
     int DB_size = 0;
@@ -416,8 +396,6 @@ void Dynamic_Hash::Print_Hash(){
     }
     cout<< "================<HASH_TABLE>=========================" << endl;
 }
-Dynamic_Hash* Hash;
-
 
 
 class Score_Element{
@@ -481,7 +459,7 @@ public :
    long Find(float find_score, int& S_Index, bool& score_is_find);
    bool Insert(float score, long ID_offset);
    void Score_search(float lower, float uppper, int* Result);
-   void get_leaf_Node(int num);
+   void get_leaf_Node(int num,fstream& Dat_File,Dynamic_Hash* Hash);
    void test(int num);
    int Check_leaf_Node_num();
    void check();
@@ -839,7 +817,7 @@ void B_Plus_Tree::Score_search(float lower, float uppper, int* Result)
    return;
 }
 // New Func
-void B_Plus_Tree::get_leaf_Node(int num){
+void B_Plus_Tree::get_leaf_Node(int num,fstream& Dat_File,Dynamic_Hash* Hash){
 
 
     int Result[20000];
@@ -941,7 +919,7 @@ void B_Plus_Tree::check(){
 
 B_Plus_Tree* Tree;
 
-bool openDB(char* filename){
+bool openDB(char* filename,Dynamic_Hash** Hash,fstream& Dat_File){
 
    char Filename[80] = "";
    sprintf(Filename, "%s.DB", filename);
@@ -953,22 +931,24 @@ bool openDB(char* filename){
       Dat_File.clear();
       Dat_File.open(Filename, ios::in | ios::out | ios::binary | ios::trunc);
       Dat_File.seekp(0, ios::beg);
-      Dat_File.write((char*)&Dat_block, sizeof(Block));
+      Block Dat_block1;
+      Dat_File.write((char*)&Dat_block1, sizeof(Block));
    }
    strcpy(Filename,"");
    sprintf(Filename, "%s.hash", filename);
    remove(Filename);
-   Hash = new Dynamic_Hash(Filename);
+   *Hash = new Dynamic_Hash(Filename);
 
+/*
    strcpy(Filename,"");
-   sprintf(Filename, "Students_score.idx");
+   sprintf(Filename, "%s_score.idx",filename);
    remove(Filename);
-   Tree = new B_Plus_Tree("Students_score.idx");
-
+   Tree = new B_Plus_Tree(Filename);
+*/
    return true;
 }
 
-unsigned insertRecord(char* name, unsigned ID, float score, unsigned advisorID)
+unsigned insertRecord(char* name, unsigned ID, float score, unsigned advisorID,Dynamic_Hash* Hash,fstream& Dat_File)
 {
    char* temp = new char[10];
    char* temp1 = new char[10];
@@ -982,8 +962,10 @@ unsigned insertRecord(char* name, unsigned ID, float score, unsigned advisorID)
 
    int Dat_File_Offset = Hash->Get_Hash_Offset(id);
 
+ //  cout << Dat_File_Offset << " ";
    Dat_File.seekg(Dat_File_Offset, ios::beg);
    Dat_File.read((char*)&Dat_block, sizeof(Block));
+ //  cout<< Dat_block.Record_Count << " " << Dat_block.Bit_Number << " " << Hash->return_Table_bit()<< endl;
 
    if(Dat_block.Record_Count < BLOCK_MAX)
       {
@@ -1003,27 +985,21 @@ unsigned insertRecord(char* name, unsigned ID, float score, unsigned advisorID)
       {
          Hash->Block_Full(id, Dat_block.Bit_Number, Dat_File);
 
-         for(int i=0; i<Dat_block.Record_Count; i++)
-         {
-            unsigned studentid = Dat_block.Record[i].ID;
-            sprintf(temp1, "%d",studentid);
-            string student_id=temp1;
-            Dat_File_Offset = Hash->Get_Hash_Offset(student_id);
-            blockNumber=Dat_File_Offset;
-            insertBlockNumber(blockNumber, studentid);
-         }
-         insertRecord(name,ID,score,advisorID);
+         insertRecord(name,ID,score,advisorID,Hash,Dat_File);
       }
 
       if(Is_Insert == true)
       {
-         Tree->Insert(score,(long)ID);
+         //Tree->Insert(score,(long)ID);
       }
 
+
    blockNumber=Dat_File_Offset;
+   delete temp;
+   delete temp1;
    return blockNumber;
 }
-unsigned searchID(unsigned ID){
+unsigned searchID(unsigned ID,fstream& Dat_File,Dynamic_Hash* Hash){
 
    char* temp = new char[10];
    string id="";
@@ -1044,52 +1020,11 @@ unsigned searchID(unsigned ID){
 
    return blockNumber;
 }
-unsigned searchScore(float lower, float upper){
+void get_info(Dynamic_Hash* Hash,fstream& Dat_File,char* csvname){
+    char Filename[80] = "";
+   sprintf(Filename, "%s.csv", csvname);
 
-   unsigned numOfScore = 0;
-   int Result[20000];
-   unsigned Dat_File_Offset;
-   int i;
-   for(i=0; i<20000; i++)
-      Result[i] = -1;
-
-   Tree->Score_search(lower, upper, Result);
-
-   int Total_Count = 0;
-
-   char temp[80] = "";
-   string id   = "";
-   for(i=0; i<20000; i++)
-   {
-      if(Result[i] != -1)
-      {
-         sprintf(temp, "%d", Result[i]);
-         id = temp;
-         Dat_File_Offset = Hash->Get_Hash_Offset(id);
-         Dat_File.seekg(Dat_File_Offset, ios::beg);
-         Dat_File.read((char*)&Dat_block, sizeof(Block));
-
-         for(int j=0; j<Dat_block.Record_Count; j++)
-            if(Result[i] == Dat_block.Record[j].ID)
-            {
-                cout << Dat_block.Record[j].ID << "  " << Dat_block.Record[j].Name << "        "<< Dat_block.Record[j].Score << "       " << Dat_block.Record[j].advisorID << endl;
-               Total_Count++;
-               break;
-            }
-      }
-      else
-         break;
-   }
-   numOfScore=Total_Count;
-   return numOfScore;
-}
-// main
-int main()
-{
-
-   openDB("Students");
-
-   ifstream fin("sampleData.csv", ios::in);
+    ifstream fin(Filename, ios::in);
 
 
     string line;
@@ -1134,36 +1069,47 @@ int main()
             advisorID = str2unsign(cell);
 
             total ++;
-            if(total%10000==0)
-                cout << total << endl;
+           // cout << total << " ";
             // insertRecord
-            unsigned blockNumber = insertRecord(name, studentID, score, advisorID);
-             // for ESPA
-            insertBlockNumber(blockNumber, studentID);
+            unsigned blockNumber = insertRecord(name, studentID, score, advisorID,Hash,Dat_File);
+
 
         }
-    }
-    Hash->Make_txt();
-    Hash->Print_Hash();
-    Tree->check();
-    int num;
-    int break_sign = 0;
-
-    while(break_sign==0){
-        if(num == -1){
-            break_sign++;
-        }
-        else{
-            cout << " Leaf Node Number : "<< "1 ~ " << Tree->Check_leaf_Node_num() << endl;
-            cout << " Please Enter leaf Num ( Exit : -1 ) : ";
-            cin >> num;
-            if(num == -1){
-                return 0;
-            }
-            Tree->get_leaf_Node(num);
-        }
-        cout << endl;
     }
     fin.close();
+
+}
+
+// main
+int main()
+{
+    int a;
+
+    Dynamic_Hash* Hash1;
+    Dynamic_Hash* Hash2;
+
+
+    fstream Dat_File1;
+
+    fstream Dat_File2;
+
+   openDB("Students",&Hash1,Dat_File1);
+   get_info(Hash1,Dat_File1,"21");
+
+    Hash1->Make_txt(Dat_File1);
+    Hash1->Print_Hash();
+
+    openDB("Prof",&Hash2,Dat_File2);
+    Dat_File2.seekg(0, ios::beg);
+    Dat_File2.read((char*)&Dat_block, sizeof(Block));
+
+
+   get_info(Hash2,Dat_File2,"22");
+
+    Hash2->Make_txt(Dat_File2);
+    Hash2->Print_Hash();
+
+
+
    return 0;
 }
