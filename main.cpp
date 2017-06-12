@@ -1000,6 +1000,7 @@ unsigned insertRecord(char* name, unsigned ID, float score, unsigned advisorID,D
    delete temp1;
    return blockNumber;
 }
+// exact mactch query
 unsigned searchID(unsigned ID,fstream& Dat_File,Dynamic_Hash* Hash){
 
    char* temp = new char[10];
@@ -1095,8 +1096,12 @@ int main()
 
     fstream Dat_File2;
 
-   openDB("Students",&Hash1,Dat_File1,&Tree1);
-   get_info(Hash1,Dat_File1,"21",Tree1);
+    fstream query_file("query.txt");
+
+    string choice_query = "";
+
+    openDB("Students",&Hash1,Dat_File1,&Tree1);
+    get_info(Hash1,Dat_File1,"21",Tree1);
 
     Hash1->Make_txt(Dat_File1,"Students");
     Hash1->Print_Hash();
@@ -1108,6 +1113,20 @@ int main()
     Hash2->Make_txt(Dat_File2,"Prof");
     Hash2->Print_Hash();
 
+    cout << endl << "Enter query : ";
+    cin >> choice_query;
+    if(choice_query == "exact"){
+        unsigned Input_ID;
+        int Block_num;
+        cout << "Enter ID : ";
+        cin >> Input_ID;
+        searchID(Input_ID,Dat_File1,Hash1);
+        for(int i = 0 ; i < Dat_block.Record_Count; i++){
+            if(Dat_block.Record[i].ID == Input_ID){
+                cout << Dat_block.Record[i].ID << " " << Dat_block.Record[i].Name << " " << Dat_block.Record[i].Score << " " << Dat_block.Record[i].advisorID << endl;
+            }
+        }
+    }
 
 
    return 0;
