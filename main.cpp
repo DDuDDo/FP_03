@@ -16,6 +16,7 @@
 
 using namespace std;
 
+ofstream query_out("query.res");
 
 int str2int (const string &str) {
   stringstream ss(str);
@@ -1082,13 +1083,11 @@ void get_info(Dynamic_Hash* Hash,fstream& Dat_File,char* csvname,B_Plus_Tree* Tr
 
 }
 unsigned searchScore(float lower, float upper,Dynamic_Hash* Hash,fstream& Dat_File,B_Plus_Tree* Tree){
-    ofstream query_out("query.res");
-    query_out.seekp(0,ios::end);
    unsigned numOfScore = 0;
-   int Result[20000];
+   int Result[500000];
    unsigned Dat_File_Offset;
    int i;
-   for(i=0; i<20000; i++)
+   for(i=0; i<500000; i++)
       Result[i] = -1;
 
    Tree->Score_search(lower, upper, Result);
@@ -1097,7 +1096,7 @@ unsigned searchScore(float lower, float upper,Dynamic_Hash* Hash,fstream& Dat_Fi
 
    char temp[80] = "";
    string id   = "";
-   for(i=0; i<20000; i++)
+   for(i=0; i<500000; i++)
    {
       if(Result[i] != -1)
       {
@@ -1120,7 +1119,7 @@ unsigned searchScore(float lower, float upper,Dynamic_Hash* Hash,fstream& Dat_Fi
    }
    numOfScore=Total_Count;
    query_out << "---------------------------------------------------------------------------------" << endl;
-   query_out.close();
+
    return numOfScore;
 }
 
@@ -1139,7 +1138,7 @@ int main()
     string choice_query = "";
 
     openDB("Students",&Hash1,Dat_File1,&Tree1);
-    get_info(Hash1,Dat_File1,"21",Tree1);
+    get_info(Hash1,Dat_File1,"sampleData",Tree1);
 
     Hash1->Make_txt(Dat_File1,"Students");
     Hash1->Print_Hash();
@@ -1181,7 +1180,6 @@ int main()
             query_name = cell;
 
             if(query_name == "Search-Exact"){
-                ofstream query_out("query.res");
                 query_out.seekp(0,ios::end);
                 getline(lineStream,cell,',');
                 Table_name = cell;
@@ -1197,7 +1195,7 @@ int main()
                     }
                 }
                 query_out << "---------------------------------------------------------------------------------" << endl;
-                query_out.close();
+
             }
             else if ( query_name == "Search-Range"){
                 getline(lineStream,cell,',');
