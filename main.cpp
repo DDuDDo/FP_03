@@ -1085,18 +1085,14 @@ void get_info(Dynamic_Hash* Hash,fstream& Dat_File,char* csvname,B_Plus_Tree* Tr
 // main
 int main()
 {
-    int a;
-
     Dynamic_Hash* Hash1;
     Dynamic_Hash* Hash2;
     B_Plus_Tree* Tree1;
     B_Plus_Tree* Tree2;
 
     fstream Dat_File1;
-
     fstream Dat_File2;
 
-    fstream query_file("query.txt");
 
     string choice_query = "";
 
@@ -1108,26 +1104,74 @@ int main()
 
     openDB("Prof",&Hash2,Dat_File2,&Tree2);
 
-   get_info(Hash2,Dat_File2,"22",Tree2);
+    get_info(Hash2,Dat_File2,"22",Tree2);
 
     Hash2->Make_txt(Dat_File2,"Prof");
     Hash2->Print_Hash();
 
-    cout << endl << "Enter query : ";
-    cin >> choice_query;
-    if(choice_query == "exact"){
-        unsigned Input_ID;
-        int Block_num;
-        cout << "Enter ID : ";
-        cin >> Input_ID;
-        searchID(Input_ID,Dat_File1,Hash1);
-        for(int i = 0 ; i < Dat_block.Record_Count; i++){
-            if(Dat_block.Record[i].ID == Input_ID){
-                cout << Dat_block.Record[i].ID << " " << Dat_block.Record[i].Name << " " << Dat_block.Record[i].Score << " " << Dat_block.Record[i].advisorID << endl;
+    ifstream query_file("query.csv");
+    ofstream query_out("query.res");
+    string line;
+
+    int total_num;
+    string query_name= "";
+    string Table_name = "";
+    string key_name = "";
+    unsigned query_ID = 0;
+    float low_score = 0.0;
+    float high_score = 0.0;
+    int sign = 0;
+
+    while(getline(query_file,line))
+    {
+        stringstream  lineStream(line);
+        string        cell= "";
+        if(sign == 0){
+            getline(lineStream,cell,',');
+            total_num = str2int(cell);
+            for(int i =0 ; i<4; i++){
+                getline(lineStream,cell,',');
             }
+            sign++;
+        }
+        else if(sign > 0){
+            getline(lineStream,cell,',');
+            query_name = cell;
+
+            if(query_name == "Search-Exact"){
+                getline(lineStream,cell,',');
+                Table_name = cell;
+                getline(lineStream,cell,',');
+                key_name = cell;
+                getline(lineStream,cell,',');
+                query_ID = str2unsign(cell);
+                getline(lineStream,cell,',');
+                searchID(query_ID,Dat_File1,Hash1);
+                for(int i = 0 ; i < Dat_block.Record_Count; i++){
+                    if(Dat_block.Record[i].ID == query_ID){
+                        query_out << Dat_block.Record[i].ID << " " << Dat_block.Record[i].Name << " " << Dat_block.Record[i].Score << " " << Dat_block.Record[i].advisorID << endl;
+                    }
+                }
+            }
+            else if ( query_name == "Search-Range"){
+                getline(lineStream,cell,',');
+                Table_name = cell;
+                getline(lineStream,cell,',');
+                key_name = cell;
+                getline(lineStream,cell,',');
+                low_score = str2float(cell);
+                getline(lineStream,cell,',');
+                high_score = str2float(cell);
+                // 함수 적기
+            }
+            else if ( query_name == "Join"){
+
+            }
+            else
+                return 0;
+
+
         }
     }
-
-
    return 0;
 }
