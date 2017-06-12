@@ -1081,6 +1081,48 @@ void get_info(Dynamic_Hash* Hash,fstream& Dat_File,char* csvname,B_Plus_Tree* Tr
     fin.close();
 
 }
+unsigned searchScore(float lower, float upper,Dynamic_Hash* Hash,fstream& Dat_File,B_Plus_Tree* Tree){
+    ofstream query_out("query.res");
+    query_out.seekp(0,ios::end);
+   unsigned numOfScore = 0;
+   int Result[20000];
+   unsigned Dat_File_Offset;
+   int i;
+   for(i=0; i<20000; i++)
+      Result[i] = -1;
+
+   Tree->Score_search(lower, upper, Result);
+
+   int Total_Count = 0;
+
+   char temp[80] = "";
+   string id   = "";
+   for(i=0; i<20000; i++)
+   {
+      if(Result[i] != -1)
+      {
+         sprintf(temp, "%d", Result[i]);
+         id = temp;
+         Dat_File_Offset = Hash->Get_Hash_Offset(id);
+         Dat_File.seekg(Dat_File_Offset, ios::beg);
+         Dat_File.read((char*)&Dat_block, sizeof(Block));
+
+         for(int j=0; j<Dat_block.Record_Count; j++)
+            if(Result[i] == Dat_block.Record[j].ID)
+            {
+                query_out << Dat_block.Record[j].ID << "  " << Dat_block.Record[j].Name << "        "<< Dat_block.Record[j].Score << "       " << Dat_block.Record[j].advisorID << endl;
+               Total_Count++;
+               break;
+            }
+      }
+      else
+         break;
+   }
+   numOfScore=Total_Count;
+   query_out << "---------------------------------------------------------------------------------" << endl;
+   query_out.close();
+   return numOfScore;
+}
 
 // main
 int main()
@@ -1110,7 +1152,7 @@ int main()
     Hash2->Print_Hash();
 
     ifstream query_file("query.csv");
-    ofstream query_out("query.res");
+
     string line;
 
     int total_num;
@@ -1139,6 +1181,8 @@ int main()
             query_name = cell;
 
             if(query_name == "Search-Exact"){
+                ofstream query_out("query.res");
+                query_out.seekp(0,ios::end);
                 getline(lineStream,cell,',');
                 Table_name = cell;
                 getline(lineStream,cell,',');
@@ -1152,6 +1196,8 @@ int main()
                         query_out << Dat_block.Record[i].ID << " " << Dat_block.Record[i].Name << " " << Dat_block.Record[i].Score << " " << Dat_block.Record[i].advisorID << endl;
                     }
                 }
+                query_out << "---------------------------------------------------------------------------------" << endl;
+                query_out.close();
             }
             else if ( query_name == "Search-Range"){
                 getline(lineStream,cell,',');
@@ -1163,6 +1209,7 @@ int main()
                 getline(lineStream,cell,',');
                 high_score = str2float(cell);
                 // 함수 적기
+                searchScore(low_score,high_score,Hash1,Dat_File1,Tree1);
             }
             else if ( query_name == "Join"){
 
@@ -1170,8 +1217,8 @@ int main()
             else
                 return 0;
 
-
         }
+
     }
    return 0;
 }
