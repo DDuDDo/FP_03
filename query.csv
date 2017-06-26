@@ -1,4 +1,5 @@
-3,,,,
-Search-Exact,Professors,ProfID,200510021,
-Search-Exact,Professors,ProfID,200110029,
-Search-Range,Professors,score,2,3
+4,,,,
+Search-Exact,Professors,ProfID,1045,
+Search-Exact,Professors,ProfID,849,
+Search-Range,Professors,Salary,100041,100041
+Join,Professors,Students,,
